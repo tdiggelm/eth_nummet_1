@@ -28,7 +28,20 @@ def rhs(y, D=3):
     #       wobei y = (q, p) wie in der Beschreibung.     #
     #                                                     #
     #######################################################
-    dy = hstack(dq, dp)
+    for k in range(N):
+        for i in range(D):
+            dq[(k*D)+i] = p[(k*D)+i] / m[k]
+
+    for k in range(N):
+        qs = zeros(D)
+        for i in range(N):
+            if i != k:
+                qi = q[i:(i+D)]
+                qk = q[k:(k+D)]
+                qs += G * m[k]*m[i] / power(norm(qi-qk),3) * (qi - qk)
+        dp[k:(k+D)] = qs
+
+    dy = hstack([dq, dp])
     return dy
 
 
@@ -75,11 +88,20 @@ def integrate_EE(y0, xStart, xEnd, steps, flag=False):
     #       zur integration der funktion y(x).                #
     #                                                         #
     ###########################################################
+
+    h = double(xEnd)/steps
+    y[0,:] = y0
+
+    for k in xrange(steps-1):
+        y[k+1,:] = y[k,:] + h * rhs(y[k,:])
+        x[k+1] = (k+1)*h
+
     if flag:
         return x[-1], y[-1][:]
     else:
         return x, y
 
+from scipy.optimize import fsolve
 
 def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     r"""Integrate ODE with implicit Euler method
@@ -102,6 +124,15 @@ def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     #       zur integration der funktion y(x).                #
     #                                                         #
     ###########################################################
+
+    h = double(xEnd)/steps
+    y[0,:] = y0
+
+    for k in xrange(steps-1):
+        F = lambda x: x - y[k,:] - h * rhs(x)
+        y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
+        x[k+1] = (k+1)*h
+
     if flag:
         return x[-1], y[-1][:]
     else:
@@ -218,6 +249,9 @@ ax.set_xlabel("x")
 ax.set_ylabel("y")
 fig.savefig("zwei.pdf")
 
+print("### exit ###")
+from sys import exit
+exit()
 
 # Unteraufgabe d)
 

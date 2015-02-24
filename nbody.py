@@ -4,6 +4,8 @@ from numpy.linalg import *
 import scipy.optimize
 from matplotlib.pyplot import *
 from time import time
+from scipy.optimize import fsolve
+from sys import exit
 
 
 # Unteraufgabe a)
@@ -28,22 +30,24 @@ def rhs(y, D=3):
     #       wobei y = (q, p) wie in der Beschreibung.     #
     #                                                     #
     #######################################################
+
     for k in range(N):
         for i in range(D):
             dq[(k*D)+i] = p[(k*D)+i] / m[k]
+    #dq = (p.reshape((N,D)) / m[:,newaxis]).flatten()
 
     for k in range(N):
-        qs = zeros(D)
         for i in range(N):
             if i != k:
-                qi = q[i:(i+D)]
-                qk = q[k:(k+D)]
-                qs += G * m[k]*m[i] / power(norm(qi-qk),3) * (qi - qk)
-        dp[k:(k+D)] = qs
+                qi = q[i*D:(i*D+D)]
+                qk = q[k*D:(k*D+D)]
+                dp[k*D:(k*D+D)] += G*(m[k]*m[i]) / (norm(qi-qk)**3) * (qi - qk)
 
     dy = hstack([dq, dp])
     return dy
 
+
+# Unteraufgabe c)
 
 def rhs_vv(q, D=3):
     """Right hand side
@@ -80,8 +84,8 @@ def integrate_EE(y0, xStart, xEnd, steps, flag=False):
     Output: x ... variable
             y ... solution
     """
-    x = np.zeros(steps)
-    y = np.zeros((steps, np.size(y0)))
+    x = zeros(steps+1)
+    y = zeros((steps+1, size(y0)))
     ###########################################################
     #                                                         #
     # TODO: Implementieren Sie hier die explizite Euler Regel #
@@ -92,7 +96,7 @@ def integrate_EE(y0, xStart, xEnd, steps, flag=False):
     h = double(xEnd)/steps
     y[0,:] = y0
 
-    for k in xrange(steps-1):
+    for k in xrange(steps):
         y[k+1,:] = y[k,:] + h * rhs(y[k,:])
         x[k+1] = (k+1)*h
 
@@ -101,7 +105,6 @@ def integrate_EE(y0, xStart, xEnd, steps, flag=False):
     else:
         return x, y
 
-from scipy.optimize import fsolve
 
 def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     r"""Integrate ODE with implicit Euler method
@@ -116,15 +119,14 @@ def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     Output: x ... variable
             y ... solution
     """
-    x = np.zeros(steps)
-    y = np.zeros((steps, np.size(y0)))
+    x = zeros(steps+1)
+    y = zeros((steps+1, size(y0)))
     ###########################################################
     #                                                         #
     # TODO: Implementieren Sie hier die implizite Euler Regel #
     #       zur integration der funktion y(x).                #
     #                                                         #
     ###########################################################
-
     h = double(xEnd)/steps
     y[0,:] = y0
 
@@ -152,19 +154,30 @@ def integrate_IM(y0, xStart, xEnd, steps, flag=False):
     Output: x ... variable
             y ... solution
     """
-    x = np.zeros(steps)
-    y = np.zeros((steps, np.size(y0)))
+    x = zeros(steps+1)
+    y = zeros((steps+1, size(y0)))
     #################################################################
     #                                                               #
     # TODO: Implementieren Sie hier die implizite Mittelpunktsregel #
     #       zur integration der funktion y(x).                      #
     #                                                               #
     #################################################################
+    h = double(xEnd)/steps
+    y[0,:] = y0
+
+    for k in xrange(steps-1):
+        F = lambda x: x - y[k,:] - h * rhs(0.5*(x + y[k,:]))
+        y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
+        x[k+1] = (k+1)*h
+
+
     if flag:
         return x[-1], y[-1][:]
     else:
         return x, y
 
+
+# Unteraufgabe c)
 
 def integrate_VV(y0, xStart, xEnd, steps, flag=False):
     r"""Integrate ODE with velocity verlet rule
@@ -179,8 +192,8 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
     Output: x ... variable
             y ... solution
     """
-    x = np.zeros(steps)
-    y = np.zeros((steps, np.size(y0)))
+    x = zeros(steps+1)
+    y = zeros((steps+1, size(y0)))
     #############################################################
     #                                                           #
     # TODO: Implementieren Sie hier die velocity Verlet Methode #
@@ -193,7 +206,7 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
         return x, y
 
 
-# Unteraufgabe c)
+# Unteraufgabe d)
 
 G = 1.0
 m = array([500.0, 1.0])
@@ -250,10 +263,9 @@ ax.set_ylabel("y")
 fig.savefig("zwei.pdf")
 
 print("### exit ###")
-from sys import exit
 exit()
 
-# Unteraufgabe d)
+# Unteraufgabe e)
 
 G = 1.0
 m = array([1.0, 1.0, 1.0])
@@ -284,7 +296,7 @@ ax.set_ylabel("y")
 fig.savefig("drei.pdf")
 
 
-# Unteraufgabe e)
+# Unteraufgabe f)
 
 G = 2.95912208286e-4
 

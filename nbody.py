@@ -34,7 +34,6 @@ def rhs(y, D=3):
     for k in range(N):
         for i in range(D):
             dq[(k*D)+i] = p[(k*D)+i] / m[k]
-    #dq = (p.reshape((N,D)) / m[:,newaxis]).flatten()
 
     for k in range(N):
         for i in range(N):
@@ -72,10 +71,6 @@ def rhs_vv(q, D=3):
                 qi = q[i*D:(i*D+D)]
                 qk = q[k*D:(k*D+D)]
                 dp[k*D:(k*D+D)] += G*(m[k]*m[i]) / (norm(qi-qk)**3) * (qi - qk)
-
-    for i,mass in enumerate(m):
-        for k in range(D):
-            dp[(i*D)+k] /= mass
 
     return dp
 
@@ -203,35 +198,34 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
             y ... solution
     """
     x = zeros(steps+1)
-    y = zeros((steps+1, size(y0)))
+    #y = zeros((steps+1, size(y0)))
     #############################################################
     #                                                           #
     # TODO: Implementieren Sie hier die velocity Verlet Methode #
     #       zur integration der funktion y(x).                  #
     #                                                           #
     #############################################################
+
+    def multiply_mass(x, y, D=3):
+        """ Helper to broadcast mass array """
+        return (x.reshape(-1,D) * y[:,newaxis]).flatten()
+
     q0, p0 = hsplit(y0, 2)
     v = zeros((steps, size(p0)))
     q = zeros((steps, size(q0)))
 
     h = double(xEnd)/steps
-    v[0,:] = p0 # (p0.reshape((N,D)) / m[:,newaxis]).flatten()
+    v[0,:] = multiply_mass(p0, 1/m)
     q[0,:] = q0
 
     for k in xrange(steps-1):
-        q[k+1,:] = q[k,:] + h * v[k,:] + 0.5 * h**2 * rhs_vv(q[k,:])
-        v[k+1] = v[k,:] + 0.5 * h * (rhs_vv(q[k,:]) + rhs_vv(q[k+1,:]))
+        v0 = multiply_mass(rhs_vv(q[k,:]), 1/m)
+        q[k+1,:] = q[k,:] + h * v[k,:] + 0.5 * h**2 * v0
+        v1 = multiply_mass(rhs_vv(q[k+1,:]), 1/m)
+        v[k+1] = v[k,:] + 0.5 * h * (v0 + v1)
 
-    D = 3
-    p = zeros((steps, size(p0)))
-    for vi in range(steps-1):
-        for i,mass in enumerate(m):
-            for k in range(D):
-                p[vi, (i*D)+k] = v[vi, (i*D)+k] * mass
-
-    y = hstack((q, p)) # multiply v with mass
-
-    print(y.shape)
+    p = array([multiply_mass(vk, m) for vk in v])
+    y = hstack((q, p))
 
     if flag:
         return x[-1], y[-1][:]
@@ -256,7 +250,7 @@ t_ee, y_ee = integrate_EE(y0, 0, T, nrsteps, False)
 endtime = time()
 print('EE needed %f seconds' % (endtime-starttime))
 
-"""starttime = time()
+starttime = time()
 t_ie, y_ie = integrate_IE(y0, 0, T, nrsteps, False)
 endtime = time()
 print('IE needed %f seconds' % (endtime-starttime))
@@ -264,14 +258,12 @@ print('IE needed %f seconds' % (endtime-starttime))
 starttime = time()
 t_im, y_im = integrate_IM(y0, 0, T, nrsteps, False)
 endtime = time()
-print('IM needed %f seconds' % (endtime-starttime))"""
+print('IM needed %f seconds' % (endtime-starttime))
 
 starttime = time()
 t_vv, y_vv = integrate_VV(y0, 0, T, nrsteps, False)
 endtime = time()
 print('VV needed %f seconds' % (endtime-starttime))
-
-#print("### y_ee.shape", y_ee.shape)
 
 # Plot
 fig = figure(figsize=(12,8))
@@ -280,11 +272,11 @@ ax.set_aspect("equal")
 ax.plot(y_ee[:,0], y_ee[:,1], "b-")
 ax.plot(y_ee[:,3], y_ee[:,4], "b-", label="EE")
 
-"""ax.plot(y_ie[:,0], y_ie[:,1], "g-")
+ax.plot(y_ie[:,0], y_ie[:,1], "g-")
 ax.plot(y_ie[:,3], y_ie[:,4], "g-", label="IE")
 
 ax.plot(y_im[:,0], y_im[:,1], "r-")
-ax.plot(y_im[:,3], y_im[:,4], "r-", label="IM")"""
+ax.plot(y_im[:,3], y_im[:,4], "r-", label="IM")
 
 ax.plot(y_vv[:,0], y_vv[:,1], "m-")
 ax.plot(y_vv[:,3], y_vv[:,4], "m-", label="VV")
@@ -326,9 +318,6 @@ ax.legend(loc="upper right")
 ax.set_xlabel("x")
 ax.set_ylabel("y")
 fig.savefig("drei.pdf")
-
-print("### exit ###")
-exit()
 
 # Unteraufgabe f)
 

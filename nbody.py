@@ -73,6 +73,10 @@ def rhs_vv(q, D=3):
                 qk = q[k*D:(k*D+D)]
                 dp[k*D:(k*D+D)] += G*(m[k]*m[i]) / (norm(qi-qk)**3) * (qi - qk)
 
+    for i,mass in enumerate(m):
+        for k in range(D):
+            dp[(i*D)+k] /= mass
+
     return dp
 
 
@@ -137,7 +141,7 @@ def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     h = double(xEnd)/steps
     y[0,:] = y0
 
-    for k in xrange(steps-1):
+    for k in xrange(steps):
         F = lambda x: x - y[k,:] - h * rhs(x)
         y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
         x[k+1] = (k+1)*h
@@ -172,11 +176,10 @@ def integrate_IM(y0, xStart, xEnd, steps, flag=False):
     h = double(xEnd)/steps
     y[0,:] = y0
 
-    for k in xrange(steps-1):
+    for k in xrange(steps):
         F = lambda x: x - y[k,:] - h * rhs(0.5*(x + y[k,:]))
         y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
         x[k+1] = (k+1)*h
-
 
     if flag:
         return x[-1], y[-1][:]
@@ -207,29 +210,28 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
     #       zur integration der funktion y(x).                  #
     #                                                           #
     #############################################################
-    q, _ = hsplit(y0, 2)
-    v = zeros((steps+1, size(y0)))
-
-    print("q", q)
-    print("v", v.shape)
-    print("rhs_vv(y0)", rhs_vv(q))
+    q0, p0 = hsplit(y0, 2)
+    v = zeros((steps+1, size(p0)))
+    q = zeros((steps+1, size(q0)))
 
     h = double(xEnd)/steps
-    y[0,:] = y0
-    vv = rhs_vv(q)
-    for k in range(len(m)):
-        for i in range(3):
-            vv[(k*3)+i] = vv[(k*3)+i] / m[k]
-
-    v0 = zeros(12)
-    v0[6:] = vv
-    v[0,:] = v0
-
-    #exit()
+    v[0,:] = p0 # (p0.reshape((N,D)) / m[:,newaxis]).flatten()
+    q[0,:] = q0
 
     for k in xrange(steps):
-        y[k+1,:] = y[k,:] + h * v[k,:] + 0.5 * h**2 * rhs(y[k,:])
-        v[k+1] = v[k,:] + 0.5 * h * (rhs(y[k,:]) + rhs(y[k+1,:]))
+        q[k+1,:] = q[k,:] + h * v[k,:] + 0.5 * h**2 * rhs_vv(q[k,:])
+        v[k+1] = v[k,:] + 0.5 * h * (rhs_vv(q[k,:]) + rhs_vv(q[k+1,:]))
+
+    D = 3
+    p = zeros((steps+1, size(p0)))
+    for vi in range(steps):
+        for i,mass in enumerate(m):
+            for k in range(D):
+                p[vi, (i*D)+k] = v[vi, (i*D)+k] * mass
+
+    y = hstack((q, p)) # multiply v with mass
+
+    print(y.shape)
 
     if flag:
         return x[-1], y[-1][:]
@@ -249,12 +251,12 @@ y0 = hstack([q0, p0])
 T = 3
 nrsteps = 5000
 
-"""starttime = time()
+starttime = time()
 t_ee, y_ee = integrate_EE(y0, 0, T, nrsteps, False)
 endtime = time()
 print('EE needed %f seconds' % (endtime-starttime))
 
-starttime = time()
+"""starttime = time()
 t_ie, y_ie = integrate_IE(y0, 0, T, nrsteps, False)
 endtime = time()
 print('IE needed %f seconds' % (endtime-starttime))
@@ -269,14 +271,16 @@ t_vv, y_vv = integrate_VV(y0, 0, T, nrsteps, False)
 endtime = time()
 print('VV needed %f seconds' % (endtime-starttime))
 
+#print("### y_ee.shape", y_ee.shape)
+
 # Plot
 fig = figure(figsize=(12,8))
 ax = fig.gca()
 ax.set_aspect("equal")
-"""ax.plot(y_ee[:,0], y_ee[:,1], "b-")
+ax.plot(y_ee[:,0], y_ee[:,1], "b-")
 ax.plot(y_ee[:,3], y_ee[:,4], "b-", label="EE")
 
-ax.plot(y_ie[:,0], y_ie[:,1], "g-")
+"""ax.plot(y_ie[:,0], y_ie[:,1], "g-")
 ax.plot(y_ie[:,3], y_ie[:,4], "g-", label="IE")
 
 ax.plot(y_im[:,0], y_im[:,1], "r-")
@@ -292,9 +296,6 @@ ax.legend(loc="upper right")
 ax.set_xlabel("x")
 ax.set_ylabel("y")
 fig.savefig("zwei.pdf")
-
-print("### exit ###")
-exit()
 
 # Unteraufgabe e)
 
@@ -326,6 +327,8 @@ ax.set_xlabel("x")
 ax.set_ylabel("y")
 fig.savefig("drei.pdf")
 
+print("### exit ###")
+exit()
 
 # Unteraufgabe f)
 

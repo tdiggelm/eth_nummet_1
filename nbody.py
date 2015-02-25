@@ -53,7 +53,7 @@ def rhs_vv(q, D=3):
 
     Input: q ...  array with positions
 
-    Output: dp ... time-derivative of the velocities
+    Output: dv ... time-derivative of the velocities
     """
     # Number of bodies
     N = q.size // D
@@ -72,7 +72,7 @@ def rhs_vv(q, D=3):
                 qk = q[k*D:(k*D+D)]
                 dp[k*D:(k*D+D)] += G*(m[k]*m[i]) / (norm(qi-qk)**3) * (qi - qk)
 
-    return dp
+    return (dp.reshape(-1,D) / m[:,newaxis]).flatten()
 
 
 # Unteraufgabe b)
@@ -197,35 +197,28 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
     Output: x ... variable
             y ... solution
     """
-    x = zeros(steps+1)
-    #y = zeros((steps+1, size(y0)))
+    x = zeros(steps)
+    #y = zeros((steps, size(y0)))
     #############################################################
     #                                                           #
     # TODO: Implementieren Sie hier die velocity Verlet Methode #
     #       zur integration der funktion y(x).                  #
     #                                                           #
     #############################################################
-
-    def multiply_mass(x, y, D=3):
-        """ Helper to broadcast mass array """
-        return (x.reshape(-1,D) * y[:,newaxis]).flatten()
-
+    D = 3
     q0, p0 = hsplit(y0, 2)
     v = zeros((steps, size(p0)))
     q = zeros((steps, size(q0)))
-
     h = double(xEnd)/steps
-    v[0,:] = multiply_mass(p0, 1/m)
+
+    v[0,:] = (p0.reshape(-1,D) / m[:,newaxis]).flatten()
     q[0,:] = q0
 
     for k in xrange(steps-1):
-        v0 = multiply_mass(rhs_vv(q[k,:]), 1/m)
-        q[k+1,:] = q[k,:] + h * v[k,:] + 0.5 * h**2 * v0
-        v1 = multiply_mass(rhs_vv(q[k+1,:]), 1/m)
-        v[k+1] = v[k,:] + 0.5 * h * (v0 + v1)
+        q[k+1,:] = q[k,:] + h * v[k,:] + 0.5 * h**2 * rhs_vv(q[k,:])
+        v[k+1] = v[k,:] + 0.5 * h * (rhs_vv(q[k,:]) + rhs_vv(q[k+1,:]))
 
-    p = array([multiply_mass(vk, m) for vk in v])
-    y = hstack((q, p))
+    y = hstack((q, v))
 
     if flag:
         return x[-1], y[-1][:]

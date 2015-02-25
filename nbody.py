@@ -217,6 +217,7 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
     for k in xrange(steps-1):
         q[k+1,:] = q[k,:] + h * v[k,:] + 0.5 * h**2 * rhs_vv(q[k,:])
         v[k+1] = v[k,:] + 0.5 * h * (rhs_vv(q[k,:]) + rhs_vv(q[k+1,:]))
+        x[k+1] = (k+1)*h
 
     y = hstack((q, v))
 

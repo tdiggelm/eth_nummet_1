@@ -95,8 +95,8 @@ def integrate_EE(y0, xStart, xEnd, steps, flag=False):
     Output: x ... variable
             y ... solution
     """
-    x = zeros(steps+1)
-    y = zeros((steps+1, size(y0)))
+    x = zeros(steps)
+    y = zeros((steps, size(y0)))
     ###########################################################
     #                                                         #
     # TODO: Implementieren Sie hier die explizite Euler Regel #
@@ -107,7 +107,7 @@ def integrate_EE(y0, xStart, xEnd, steps, flag=False):
     h = double(xEnd)/steps
     y[0,:] = y0
 
-    for k in xrange(steps):
+    for k in xrange(steps-1):
         y[k+1,:] = y[k,:] + h * rhs(y[k,:])
         x[k+1] = (k+1)*h
 
@@ -130,8 +130,8 @@ def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     Output: x ... variable
             y ... solution
     """
-    x = zeros(steps+1)
-    y = zeros((steps+1, size(y0)))
+    x = zeros(steps)
+    y = zeros((steps, size(y0)))
     ###########################################################
     #                                                         #
     # TODO: Implementieren Sie hier die implizite Euler Regel #
@@ -141,7 +141,7 @@ def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     h = double(xEnd)/steps
     y[0,:] = y0
 
-    for k in xrange(steps):
+    for k in xrange(steps-1):
         F = lambda x: x - y[k,:] - h * rhs(x)
         y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
         x[k+1] = (k+1)*h
@@ -165,8 +165,8 @@ def integrate_IM(y0, xStart, xEnd, steps, flag=False):
     Output: x ... variable
             y ... solution
     """
-    x = zeros(steps+1)
-    y = zeros((steps+1, size(y0)))
+    x = zeros(steps)
+    y = zeros((steps, size(y0)))
     #################################################################
     #                                                               #
     # TODO: Implementieren Sie hier die implizite Mittelpunktsregel #
@@ -176,7 +176,7 @@ def integrate_IM(y0, xStart, xEnd, steps, flag=False):
     h = double(xEnd)/steps
     y[0,:] = y0
 
-    for k in xrange(steps):
+    for k in xrange(steps-1):
         F = lambda x: x - y[k,:] - h * rhs(0.5*(x + y[k,:]))
         y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
         x[k+1] = (k+1)*h
@@ -211,20 +211,20 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
     #                                                           #
     #############################################################
     q0, p0 = hsplit(y0, 2)
-    v = zeros((steps+1, size(p0)))
-    q = zeros((steps+1, size(q0)))
+    v = zeros((steps, size(p0)))
+    q = zeros((steps, size(q0)))
 
     h = double(xEnd)/steps
     v[0,:] = p0 # (p0.reshape((N,D)) / m[:,newaxis]).flatten()
     q[0,:] = q0
 
-    for k in xrange(steps):
+    for k in xrange(steps-1):
         q[k+1,:] = q[k,:] + h * v[k,:] + 0.5 * h**2 * rhs_vv(q[k,:])
         v[k+1] = v[k,:] + 0.5 * h * (rhs_vv(q[k,:]) + rhs_vv(q[k+1,:]))
 
     D = 3
-    p = zeros((steps+1, size(p0)))
-    for vi in range(steps):
+    p = zeros((steps, size(p0)))
+    for vi in range(steps-1):
         for i,mass in enumerate(m):
             for k in range(D):
                 p[vi, (i*D)+k] = v[vi, (i*D)+k] * mass

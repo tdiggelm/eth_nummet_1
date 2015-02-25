@@ -66,6 +66,13 @@ def rhs_vv(q, D=3):
     #       geeignet fuer die velocity Verlet Methode.    #
     #                                                     #
     #######################################################
+    for k in range(N):
+        for i in range(N):
+            if i != k:
+                qi = q[i*D:(i*D+D)]
+                qk = q[k*D:(k*D+D)]
+                dp[k*D:(k*D+D)] += G*(m[k]*m[i]) / (norm(qi-qk)**3) * (qi - qk)
+
     return dp
 
 
@@ -200,6 +207,30 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
     #       zur integration der funktion y(x).                  #
     #                                                           #
     #############################################################
+    q, _ = hsplit(y0, 2)
+    v = zeros((steps+1, size(y0)))
+
+    print("q", q)
+    print("v", v.shape)
+    print("rhs_vv(y0)", rhs_vv(q))
+
+    h = double(xEnd)/steps
+    y[0,:] = y0
+    vv = rhs_vv(q)
+    for k in range(len(m)):
+        for i in range(3):
+            vv[(k*3)+i] = vv[(k*3)+i] / m[k]
+
+    v0 = zeros(12)
+    v0[6:] = vv
+    v[0,:] = v0
+
+    #exit()
+
+    for k in xrange(steps):
+        y[k+1,:] = y[k,:] + h * v[k,:] + 0.5 * h**2 * rhs(y[k,:])
+        v[k+1] = v[k,:] + 0.5 * h * (rhs(y[k,:]) + rhs(y[k+1,:]))
+
     if flag:
         return x[-1], y[-1][:]
     else:
@@ -218,7 +249,7 @@ y0 = hstack([q0, p0])
 T = 3
 nrsteps = 5000
 
-starttime = time()
+"""starttime = time()
 t_ee, y_ee = integrate_EE(y0, 0, T, nrsteps, False)
 endtime = time()
 print('EE needed %f seconds' % (endtime-starttime))
@@ -231,7 +262,7 @@ print('IE needed %f seconds' % (endtime-starttime))
 starttime = time()
 t_im, y_im = integrate_IM(y0, 0, T, nrsteps, False)
 endtime = time()
-print('IM needed %f seconds' % (endtime-starttime))
+print('IM needed %f seconds' % (endtime-starttime))"""
 
 starttime = time()
 t_vv, y_vv = integrate_VV(y0, 0, T, nrsteps, False)
@@ -242,14 +273,14 @@ print('VV needed %f seconds' % (endtime-starttime))
 fig = figure(figsize=(12,8))
 ax = fig.gca()
 ax.set_aspect("equal")
-ax.plot(y_ee[:,0], y_ee[:,1], "b-")
+"""ax.plot(y_ee[:,0], y_ee[:,1], "b-")
 ax.plot(y_ee[:,3], y_ee[:,4], "b-", label="EE")
 
 ax.plot(y_ie[:,0], y_ie[:,1], "g-")
 ax.plot(y_ie[:,3], y_ie[:,4], "g-", label="IE")
 
 ax.plot(y_im[:,0], y_im[:,1], "r-")
-ax.plot(y_im[:,3], y_im[:,4], "r-", label="IM")
+ax.plot(y_im[:,3], y_im[:,4], "r-", label="IM")"""
 
 ax.plot(y_vv[:,0], y_vv[:,1], "m-")
 ax.plot(y_vv[:,3], y_vv[:,4], "m-", label="VV")

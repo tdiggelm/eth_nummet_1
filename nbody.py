@@ -53,7 +53,7 @@ def rhs_vv(q, D=3):
 
     Input: q ...  array with positions
 
-    Output: dp ... time-derivative of the velocities
+    Output: dv ... time-derivative of the velocities
     """
     # Number of bodies
     N = q.size // D
@@ -72,8 +72,8 @@ def rhs_vv(q, D=3):
                 qk = q[k*D:(k*D+D)]
                 dp[k*D:(k*D+D)] += G*(m[k]*m[i]) / (norm(qi-qk)**3) * (qi - qk)
 
-    return (dp.reshape(-1,D) / m[:,newaxis]).flatten()
-    #return dp
+    dv = (dp.reshape(-1,D) / m[:,newaxis]).flatten()
+    return dv
 
 
 # Unteraufgabe b)
@@ -104,7 +104,7 @@ def integrate_EE(y0, xStart, xEnd, steps, flag=False):
     y[0,:] = y0
 
     for k in xrange(steps-1):
-        y[k+1,:] = y[k,:] + h * rhs(y[k,:])
+        y[k+1] = y[k] + h * rhs(y[k])
         x[k+1] = (k+1)*h
 
     if flag:
@@ -138,8 +138,8 @@ def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     y[0,:] = y0
 
     for k in xrange(steps-1):
-        F = lambda x: x - y[k,:] - h * rhs(x)
-        y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
+        F = lambda x: x - y[k] - h * rhs(x)
+        y[k+1] = fsolve(F, y[k] + h * rhs(y[k]))
         x[k+1] = (k+1)*h
 
     if flag:
@@ -173,8 +173,8 @@ def integrate_IM(y0, xStart, xEnd, steps, flag=False):
     y[0,:] = y0
 
     for k in xrange(steps-1):
-        F = lambda x: x - y[k,:] - h * rhs(0.5*(x + y[k,:]))
-        y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
+        F = lambda x: x - y[k] - h * rhs(0.5*(x + y[k]))
+        y[k+1] = fsolve(F, y[k] + h * rhs(y[k]))
         x[k+1] = (k+1)*h
 
     if flag:
@@ -359,8 +359,9 @@ q0 = hstack([qsun, qj, qs, qu, qn, qp])
 p0 = hstack([msun*vsun, mj*vj, ms*vs, mu*vu, mn*vn, mp*vp])
 y0 = hstack([q0, p0])
 
-v0 = hstack([vsun, vj, vs, vu, vn, vp])
-y0vv = hstack([q0, v0])
+# NOTE TD: use std y0
+# v0 = hstack([vsun, vj, vs, vu, vn, vp])
+# y0vv = hstack([q0, v0])
 
 T = 20000
 nrsteps = 2000
@@ -453,7 +454,7 @@ savefig("solar_im.pdf")
 
 
 starttime = time()
-t_vv, y_vv = integrate_VV(y0, 0, T, nrsteps, False)
+t_vv, y_vv = integrate_VV(y0, 0, T, nrsteps, False) # NOTE TD: use std y0
 endtime = time()
 print('VV needed %f seconds for %f steps' % (endtime-starttime, nrsteps))
 

@@ -53,7 +53,7 @@ def rhs_vv(q, D=3):
 
     Input: q ...  array with positions
 
-    Output: dp ... time-derivative of the velocities
+    Output: dv ... time-derivative of the velocities
     """
     # Number of bodies
     N = q.size // D
@@ -72,8 +72,8 @@ def rhs_vv(q, D=3):
                 qk = q[k*D:(k*D+D)]
                 dp[k*D:(k*D+D)] += G*(m[k]*m[i]) / (norm(qi-qk)**3) * (qi - qk)
 
-    return (dp.reshape(-1,D) / m[:,newaxis]).flatten()
-    #return dp
+    dv = (dp.reshape((N,D)) / m[:,newaxis]).flatten()
+    return dv
 
 
 # Unteraufgabe b)
@@ -101,10 +101,10 @@ def integrate_EE(y0, xStart, xEnd, steps, flag=False):
     ###########################################################
 
     h = double(xEnd)/steps
-    y[0,:] = y0
+    y[0] = y0
 
     for k in xrange(steps-1):
-        y[k+1,:] = y[k,:] + h * rhs(y[k,:])
+        y[k+1] = y[k] + h * rhs(y[k])
         x[k+1] = (k+1)*h
 
     if flag:
@@ -138,8 +138,8 @@ def integrate_IE(y0, xStart, xEnd, steps, flag=False):
     y[0,:] = y0
 
     for k in xrange(steps-1):
-        F = lambda x: x - y[k,:] - h * rhs(x)
-        y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
+        F = lambda x: x - y[k] - h * rhs(x)
+        y[k+1] = fsolve(F, y[k] + h * rhs(y[k]))
         x[k+1] = (k+1)*h
 
     if flag:
@@ -173,8 +173,8 @@ def integrate_IM(y0, xStart, xEnd, steps, flag=False):
     y[0,:] = y0
 
     for k in xrange(steps-1):
-        F = lambda x: x - y[k,:] - h * rhs(0.5*(x + y[k,:]))
-        y[k+1,:] = fsolve(F, y[k,:] + h * rhs(y[k,:]))
+        F = lambda x: x - y[k] - h * rhs(0.5*(x + y[k]))
+        y[k+1,:] = fsolve(F, y[k] + h * rhs(y[k]))
         x[k+1] = (k+1)*h
 
     if flag:
@@ -199,7 +199,7 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
             y ... solution
     """
     x = zeros(steps)
-    #y = zeros((steps, size(y0)))
+    y = zeros((steps, size(y0)))
     #############################################################
     #                                                           #
     # TODO: Implementieren Sie hier die velocity Verlet Methode #
@@ -207,18 +207,15 @@ def integrate_VV(y0, xStart, xEnd, steps, flag=False):
     #                                                           #
     #############################################################
 
-    """ NOTE: This implementation consistently expects momenta instead of
-        velocities for the initial condition. Therefore the input for part f)
-        was changed from y0vv to y0. This has been altered because in part d)
-        and e) no special y0 is given as well."""
+    """ NOTE: This implementation expects the locations and velocities as
+        its initial conditions. For this to work consistently, the initial
+        conditions in ex d) for integrate_vv were altered accordingly. """
 
     D = 3
-    q0, p0 = hsplit(y0, 2)
+    q0, v0 = hsplit(y0, 2)
     v = zeros((steps, size(p0)))
     q = zeros((steps, size(q0)))
     h = double(xEnd)/steps
-
-    v0 = (p0.reshape(-1,D) / m[:,newaxis]).flatten()
 
     v[0] = v0
     q[0] = q0
@@ -244,6 +241,9 @@ q0 = hstack([0,0,0, 2,0,0])
 p0 = hstack([0,0,0, 0,sqrt(m[0]/q0[3]),0])
 y0 = hstack([q0, p0])
 
+v0 = (p0.reshape((2,3)) / m[:,newaxis]).flatten() # divide by the masses
+y0vv = hstack([q0, v0]) # for velocity vervlet
+
 # Compute
 T = 3
 nrsteps = 5000
@@ -265,7 +265,7 @@ print('IM needed %f seconds' % (endtime-starttime))
 
 
 starttime = time()
-t_vv, y_vv = integrate_VV(y0, 0, T, nrsteps, False)
+t_vv, y_vv = integrate_VV(y0vv, 0, T, nrsteps, False)
 endtime = time()
 print('VV needed %f seconds' % (endtime-starttime))
 
@@ -294,6 +294,7 @@ ax.set_xlabel("x")
 ax.set_ylabel("y")
 fig.savefig("zwei.pdf")
 
+
 # Unteraufgabe e)
 
 G = 1.0
@@ -306,7 +307,10 @@ p0 = hstack([0.93240737/2., 0.86473146/2., 0,
              -0.93240737, -0.86473146, 0])
 y0 = hstack([q0, p0])
 
-t_vv, y_vv = integrate_VV(y0, 0, 2.0, 1000, False)
+v0 = p0 # the masses are all 1, so nothing has to be done to get the velocity
+y0vv = hstack([q0, v0])
+
+t_vv, y_vv = integrate_VV(y0vv, 0, 2.0, 1000, False)
 
 fig = figure(figsize=(12,8))
 ax = fig.gca()
@@ -364,6 +368,7 @@ y0vv = hstack([q0, v0])
 
 T = 20000
 nrsteps = 2000
+
 
 starttime = time()
 t_ee, y_ee = integrate_EE(y0, 0, T, nrsteps, False)
@@ -451,9 +456,8 @@ ax.set_xlabel("x")
 ax.set_ylabel("y")
 savefig("solar_im.pdf")
 
-
 starttime = time()
-t_vv, y_vv = integrate_VV(y0, 0, T, nrsteps, False)
+t_vv, y_vv = integrate_VV(y0vv, 0, T, nrsteps, False)
 endtime = time()
 print('VV needed %f seconds for %f steps' % (endtime-starttime, nrsteps))
 

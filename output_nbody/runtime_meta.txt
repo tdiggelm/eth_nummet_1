@@ -1,0 +1,10 @@
+RUNTIME META INFORMATION
+
+EE needed 1.028509 seconds
+IE needed 21.025925 seconds
+IM needed 20.460874 seconds
+VV needed 2.407944 seconds
+EE needed 2.308732 seconds for 2000.000000 steps
+IE needed 589.339083 seconds for 2000.000000 steps
+IM needed 100.342361 seconds for 2000.000000 steps
+VV needed 7.037605 seconds for 2000.000000 steps

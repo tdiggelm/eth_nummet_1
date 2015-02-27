@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+#############################################################################
+# course:   Numerische Methoden D-PHYS
+# exercise: assignment 1
+# author:   Thomas Diggelmann <thomas.diggelmann@student.ethz.ch>
+# date:     26.02.2015
+#############################################################################
 from numpy import *
 from numpy.linalg import *
 import scipy.optimize
